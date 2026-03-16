@@ -18,11 +18,16 @@ export default function CricketAnalytics() {
       <div className="mx-auto max-w-6xl px-4 sm:px-6 relative z-10">
         {/* Header */}
         <div className="mb-6 md:mb-10 text-center animate-in fade-in slide-in-from-bottom-4 duration-700">
-          <h1 className="text-3xl md:text-5xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-blue-700 to-emerald-600 pb-1">
-            Cricket Match Tools
-          </h1>
-          <p className="mt-2 text-sm md:text-lg text-slate-600 max-w-2xl mx-auto font-medium">
-            Scorecard parser & NRR scenario calculator
+          <div className="flex items-center justify-center gap-4 mb-4">
+            <div className="w-12 h-12 md:w-16 md:h-16 rounded-2xl bg-white shadow-xl flex items-center justify-center p-2 border border-white/50 overflow-hidden">
+              <img src="/logo.png" alt="CricWorks Logo" className="w-full h-full object-contain" />
+            </div>
+            <h1 className="text-4xl md:text-6xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-blue-700 to-emerald-600">
+              CricWorks
+            </h1>
+          </div>
+          <p className="text-sm md:text-xl text-slate-600 max-w-2xl mx-auto font-semibold tracking-tight">
+            Premium Scorecard Parser & NRR Calculator
           </p>
         </div>
 

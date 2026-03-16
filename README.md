@@ -1,4 +1,8 @@
-# CricTools
+# CricWorks
+
+<p align="center">
+  <img src="public/logo.png" alt="CricWorks Logo" width="120" />
+</p>
 
 Advanced cricket scorecard parser & intelligent Net Run Rate (NRR) scenario calculator. Built for performance, accuracy, and a premium user experience.
 
