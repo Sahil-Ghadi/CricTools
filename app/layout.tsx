@@ -7,9 +7,9 @@ const _geist = Geist({ subsets: ["latin"] });
 const _geistMono = Geist_Mono({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: 'CricWorks',
+  title: 'CricTools',
   description: 'Advanced cricket scorecard parser & NRR calculator',
-  generator: 'CricWorks',
+  generator: 'CricTools',
   icons: {
     icon: [
       {
