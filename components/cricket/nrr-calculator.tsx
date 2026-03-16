@@ -1,14 +1,12 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { AlertCircle, Trophy } from 'lucide-react'
-
-// ─── Helpers ──────────────────────────────────────────────────────────
 
 function oversToBalls(overs: string): number {
   const parts = overs.split('.')
@@ -62,9 +60,8 @@ function compute(
   firstInningsScore: string, matchOvers: string
 ): ResultData | null {
   const maxBalls = oversToBalls(matchOvers)
-  const innings1Balls = maxBalls   // Always use full match overs for first innings
+  const innings1Balls = maxBalls
   const score = parseInt(firstInningsScore, 10)
-
   if (!score || !innings1Balls || !maxBalls) return null
 
   const chaserStats = battingFirst === 'A' ? teamB : teamA
@@ -77,14 +74,10 @@ function compute(
   if (!hasChaser || !hasOpponent) return null
 
   const target = score + 1
-
-  // Opponent's base stats (after batting 1st innings)
   const oppRunsScoredBase = Number(opponentStats.runsScored) + score
   const oppOversFacedDecBase = oversDecimal(opponentStats.oversFaced) + innings1Balls / 6
   const oppRunsConcededBase = Number(opponentStats.runsConceded)
   const oppOversBowledDecBase = oversDecimal(opponentStats.oversBowled)
-
-  // Chaser's base stats (after bowling 1st innings)
   const chExistingRuns = Number(chaserStats.runsScored)
   const chExistingOversDec = oversDecimal(chaserStats.oversFaced)
   const chRunsConcededBase = Number(chaserStats.runsConceded) + score
@@ -96,27 +89,17 @@ function compute(
 
   for (let extra = 0; extra <= 36; extra++) {
     const scenarioRuns = target + extra
-    // Scan from max balls DOWN to 1 — find the LATEST ball where NRR is still positive
     for (let balls = maxBalls; balls >= 1; balls--) {
-      // Chaser NRR calculation
       const chaserRunsFinal = chExistingRuns + scenarioRuns
       const chaserOversFinal = chExistingOversDec + balls / 6
       const chaserNRR = (chaserRunsFinal / chaserOversFinal) - (chRunsConcededBase / chOversBowledDecBase)
-
-      // Opponent NRR calculation (must recalculate as they are bowling now)
       const oppRunsConcededFinal = oppRunsConcededBase + scenarioRuns
       const oppOversBowledFinal = oppOversBowledDecBase + balls / 6
       const opponentNRR = (oppRunsScoredBase / oppOversFacedDecBase) - (oppRunsConcededFinal / oppOversBowledFinal)
-
       if (chaserNRR > opponentNRR) {
-        const overs = ballsToOvers(balls)
-        if (extra === 0) {
-          safestBalls = balls
-          finalOpponentNRR = opponentNRR
-        }
+        if (extra === 0) { safestBalls = balls; finalOpponentNRR = opponentNRR }
         edgeCases.push({
-          runs: scenarioRuns,
-          maxOvers: overs,
+          runs: scenarioRuns, maxOvers: ballsToOvers(balls),
           chaserNRR: parseFloat(chaserNRR.toFixed(3)),
           opponentNRR: parseFloat(opponentNRR.toFixed(3)),
           nrrDiff: parseFloat((chaserNRR - opponentNRR).toFixed(3)),
@@ -145,25 +128,20 @@ export default function NrrCalculator() {
   const [result, setResult] = useState<ResultData | null>(null)
   const [error, setError] = useState('')
 
-  // Debounce calculation 400ms after last change
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current)
     debounceRef.current = setTimeout(() => {
       setError('')
-      const res = compute(teamA, teamB, battingFirst, firstInningsScore, matchOvers)
-      setResult(res)
+      setResult(compute(teamA, teamB, battingFirst, firstInningsScore, matchOvers))
     }, 400)
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current) }
   }, [teamA, teamB, battingFirst, firstInningsScore, matchOvers])
 
-  // Live NRR display (lightweight, no debounce needed)
   const nrrA = teamA.runsScored && teamA.oversFaced && teamA.runsConceded && teamA.oversBowled
-    ? calcNRR(Number(teamA.runsScored), teamA.oversFaced, Number(teamA.runsConceded), teamA.oversBowled)
-    : null
+    ? calcNRR(Number(teamA.runsScored), teamA.oversFaced, Number(teamA.runsConceded), teamA.oversBowled) : null
   const nrrB = teamB.runsScored && teamB.oversFaced && teamB.runsConceded && teamB.oversBowled
-    ? calcNRR(Number(teamB.runsScored), teamB.oversFaced, Number(teamB.runsConceded), teamB.oversBowled)
-    : null
+    ? calcNRR(Number(teamB.runsScored), teamB.oversFaced, Number(teamB.runsConceded), teamB.oversBowled) : null
 
   const teamAName = teamA.name.trim() || 'Team A'
   const teamBName = teamB.name.trim() || 'Team B'
@@ -173,105 +151,87 @@ export default function NrrCalculator() {
   const setB = (f: keyof TeamStats) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setTeamB(prev => ({ ...prev, [f]: e.target.value }))
 
-  return (
-    <div className="space-y-5 md:space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
-      {/* Teams */}
-      <Card className="rounded-xl md:rounded-2xl border-white/40 bg-white/60 backdrop-blur-xl shadow-lg md:shadow-xl overflow-hidden relative transition-all duration-300">
-        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-400 to-orange-400" />
-        <CardHeader className="px-4 md:px-6 pb-2 md:pb-4 pt-5 md:pt-6">
-          <CardTitle className="text-lg md:text-2xl font-bold text-slate-800">Tournament Stats</CardTitle>
-          <CardDescription className="text-sm md:text-base font-medium">Enter both teams’ cumulative stats so far</CardDescription>
-        </CardHeader>
-        <CardContent className="px-4 md:px-6">
-          <div className="grid gap-4 md:gap-6 md:grid-cols-2">
-            {/* Team A */}
-            <div className="group space-y-3 md:space-y-4 rounded-xl md:rounded-2xl border border-blue-200/50 bg-gradient-to-b from-blue-50/80 to-blue-100/50 p-4 md:p-5 shadow-sm transition-all duration-300 hover:shadow-md">
-              <div>
-                <Label className="text-[11px] md:text-xs font-bold tracking-wider uppercase text-blue-600">Team Name</Label>
-                <Input placeholder="Team A" value={teamA.name} onChange={setA('name')} className="mt-1 bg-white/80 backdrop-blur-sm border-blue-200 focus-visible:ring-blue-400 font-bold text-base md:text-lg rounded-lg md:rounded-xl h-10 md:h-11 transition-all" />
-              </div>
-              <div className="grid grid-cols-2 gap-2.5 md:gap-3">
-                <div className="space-y-1">
-                  <Label className="text-[11px] md:text-xs font-semibold text-slate-600">Runs Scored</Label>
-                  <Input placeholder="350" value={teamA.runsScored} onChange={setA('runsScored')} className="bg-white/80 border-blue-200 focus-visible:ring-blue-400 rounded-lg text-sm md:text-base h-9 md:h-10" />
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-[11px] md:text-xs font-semibold text-slate-600">Overs Faced</Label>
-                  <Input placeholder="40.0" value={teamA.oversFaced} onChange={setA('oversFaced')} className="bg-white/80 border-blue-200 focus-visible:ring-blue-400 rounded-lg text-sm md:text-base h-9 md:h-10" />
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-[11px] md:text-xs font-semibold text-slate-600">Runs Conceded</Label>
-                  <Input placeholder="320" value={teamA.runsConceded} onChange={setA('runsConceded')} className="bg-white/80 border-blue-200 focus-visible:ring-blue-400 rounded-lg text-sm md:text-base h-9 md:h-10" />
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-[11px] md:text-xs font-semibold text-slate-600">Overs Bowled</Label>
-                  <Input placeholder="40.0" value={teamA.oversBowled} onChange={setA('oversBowled')} className="bg-white/80 border-blue-200 focus-visible:ring-blue-400 rounded-lg text-sm md:text-base h-9 md:h-10" />
-                </div>
-              </div>
-              {nrrA !== null && (
-                <div className="flex items-center justify-between rounded-lg md:rounded-xl border border-blue-200/60 bg-white/90 backdrop-blur-md px-3 md:px-5 py-2.5 md:py-3 shadow-sm">
-                  <span className="text-xs md:text-sm font-semibold tracking-wide text-slate-500 uppercase">NRR</span>
-                  <span className={`text-xl md:text-2xl font-black tracking-tight ${nrrA >= 0 ? 'text-emerald-600' : 'text-rose-500'}`}>
-                    {nrrA >= 0 ? '+' : ''}{nrrA.toFixed(3)}
-                  </span>
-                </div>
-              )}
-            </div>
+  // Shared team input block
+  const TeamBlock = ({
+    team, setField, color, placeholder, nrr
+  }: {
+    team: TeamStats
+    setField: (f: keyof TeamStats) => (e: React.ChangeEvent<HTMLInputElement>) => void
+    color: 'blue' | 'orange'
+    placeholder: string
+    nrr: number | null
+  }) => {
+    const c = color === 'blue'
+      ? { border: 'border-blue-200/50', bg: 'from-blue-50/80 to-blue-100/50', label: 'text-blue-600', input: 'border-blue-200 focus-visible:ring-blue-400', nrrBorder: 'border-blue-200/60' }
+      : { border: 'border-orange-200/50', bg: 'from-orange-50/80 to-orange-100/50', label: 'text-orange-600', input: 'border-orange-200 focus-visible:ring-orange-400', nrrBorder: 'border-orange-200/60' }
 
-            {/* Team B */}
-            <div className="group space-y-3 md:space-y-4 rounded-xl md:rounded-2xl border border-orange-200/50 bg-gradient-to-b from-orange-50/80 to-orange-100/50 p-4 md:p-5 shadow-sm transition-all duration-300 hover:shadow-md">
-              <div>
-                <Label className="text-[11px] md:text-xs font-bold tracking-wider uppercase text-orange-600">Team Name</Label>
-                <Input placeholder="Team B" value={teamB.name} onChange={setB('name')} className="mt-1 bg-white/80 backdrop-blur-sm border-orange-200 focus-visible:ring-orange-400 font-bold text-base md:text-lg rounded-lg md:rounded-xl h-10 md:h-11 transition-all" />
-              </div>
-              <div className="grid grid-cols-2 gap-2.5 md:gap-3">
-                <div className="space-y-1">
-                  <Label className="text-[11px] md:text-xs font-semibold text-slate-600">Runs Scored</Label>
-                  <Input placeholder="320" value={teamB.runsScored} onChange={setB('runsScored')} className="bg-white/80 border-orange-200 focus-visible:ring-orange-400 rounded-lg text-sm md:text-base h-9 md:h-10" />
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-[11px] md:text-xs font-semibold text-slate-600">Overs Faced</Label>
-                  <Input placeholder="40.0" value={teamB.oversFaced} onChange={setB('oversFaced')} className="bg-white/80 border-orange-200 focus-visible:ring-orange-400 rounded-lg text-sm md:text-base h-9 md:h-10" />
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-[11px] md:text-xs font-semibold text-slate-600">Runs Conceded</Label>
-                  <Input placeholder="350" value={teamB.runsConceded} onChange={setB('runsConceded')} className="bg-white/80 border-orange-200 focus-visible:ring-orange-400 rounded-lg text-sm md:text-base h-9 md:h-10" />
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-[11px] md:text-xs font-semibold text-slate-600">Overs Bowled</Label>
-                  <Input placeholder="40.0" value={teamB.oversBowled} onChange={setB('oversBowled')} className="bg-white/80 border-orange-200 focus-visible:ring-orange-400 rounded-lg text-sm md:text-base h-9 md:h-10" />
-                </div>
-              </div>
-              {nrrB !== null && (
-                <div className="flex items-center justify-between rounded-lg md:rounded-xl border border-orange-200/60 bg-white/90 backdrop-blur-md px-3 md:px-5 py-2.5 md:py-3 shadow-sm">
-                  <span className="text-xs md:text-sm font-semibold tracking-wide text-slate-500 uppercase">NRR</span>
-                  <span className={`text-xl md:text-2xl font-black tracking-tight ${nrrB >= 0 ? 'text-emerald-600' : 'text-rose-500'}`}>
-                    {nrrB >= 0 ? '+' : ''}{nrrB.toFixed(3)}
-                  </span>
-                </div>
-              )}
+    return (
+      <div className={`space-y-2.5 rounded-xl border ${c.border} bg-gradient-to-b ${c.bg} p-3 shadow-sm`}>
+        <div>
+          <Label className={`text-[10px] font-bold tracking-wider uppercase ${c.label}`}>Team Name</Label>
+          <Input placeholder={placeholder} value={team.name} onChange={setField('name')}
+            className={`mt-1 bg-white/80 ${c.input} font-bold text-sm rounded-lg h-9`} />
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          {(['runsScored', 'oversFaced', 'runsConceded', 'oversBowled'] as (keyof TeamStats)[]).map((field) => (
+            <div key={field} className="space-y-0.5">
+              <Label className="text-[10px] font-semibold text-slate-600">
+                {field === 'runsScored' ? 'Runs Scored' : field === 'oversFaced' ? 'Overs Faced' : field === 'runsConceded' ? 'Runs Conceded' : 'Overs Bowled'}
+              </Label>
+              <Input placeholder={field.includes('Runs') || field === 'runsScored' || field === 'runsConceded' ? '0' : '0.0'}
+                value={team[field]} onChange={setField(field)}
+                className={`bg-white/80 ${c.input} rounded-lg text-sm h-8`} />
             </div>
+          ))}
+        </div>
+        {nrr !== null && (
+          <div className={`flex items-center justify-between rounded-lg border ${c.nrrBorder} bg-white/90 px-3 py-2`}>
+            <span className="text-[10px] font-bold tracking-wider uppercase text-slate-500">NRR</span>
+            <span className={`text-lg font-black ${nrr >= 0 ? 'text-emerald-600' : 'text-rose-500'}`}>
+              {nrr >= 0 ? '+' : ''}{nrr.toFixed(3)}
+            </span>
           </div>
-        </CardContent>
+        )}
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-2 animate-in fade-in slide-in-from-bottom-4 duration-700">
+
+      {/* Tournament Stats Card */}
+      <Card className="rounded-xl border-white/40 bg-white/60 backdrop-blur-xl shadow-lg overflow-hidden relative !py-0 !gap-0">
+        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-400 to-orange-400" />
+        <div className="px-4 py-3 flex flex-col gap-3">
+          <div>
+            <p className="text-sm font-bold text-slate-800">Tournament Stats</p>
+            <p className="text-xs text-slate-500 font-medium">Enter both teams' cumulative stats so far</p>
+          </div>
+          <div className="grid gap-2 md:grid-cols-2">
+            <TeamBlock team={teamA} setField={setA} color="blue" placeholder="Team A" nrr={nrrA} />
+            <TeamBlock team={teamB} setField={setB} color="orange" placeholder="Team B" nrr={nrrB} />
+          </div>
+        </div>
       </Card>
 
-      {/* Match Setup */}
-      <Card className="rounded-xl md:rounded-2xl border-white/40 bg-white/60 backdrop-blur-xl shadow-lg md:shadow-xl overflow-hidden relative transition-all duration-300">
+      {/* Match Setup Card */}
+      <Card className="rounded-xl border-white/40 bg-white/60 backdrop-blur-xl shadow-lg overflow-hidden relative !py-0 !gap-0">
         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-400 to-teal-400" />
-        <CardHeader className="px-4 md:px-6 pb-2 md:pb-4 pt-5 md:pt-6">
-          <CardTitle className="text-lg md:text-2xl font-bold text-slate-800">This Match</CardTitle>
-          <CardDescription className="text-sm md:text-base font-medium">First innings — live predictions update automatically</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4 md:space-y-5 px-4 md:px-6">
-          <div className="grid gap-3 md:gap-5 sm:grid-cols-3">
-            <div className="space-y-1">
-              <Label className="text-[11px] md:text-xs font-semibold text-slate-600">Max Overs</Label>
-              <Input placeholder="20" value={matchOvers} onChange={(e) => setMatchOvers(e.target.value)} className="bg-white/80 border-slate-200 focus-visible:ring-emerald-400 rounded-lg md:rounded-xl h-10" />
+        <div className="px-4 py-3 flex flex-col gap-3">
+          <div>
+            <p className="text-sm font-bold text-slate-800">This Match</p>
+            <p className="text-xs text-slate-500 font-medium">First innings — predictions update automatically</p>
+          </div>
+          <div className="grid gap-2 grid-cols-3">
+            <div className="space-y-0.5">
+              <Label className="text-[10px] font-semibold text-slate-600">Max Overs</Label>
+              <Input placeholder="20" value={matchOvers} onChange={(e) => setMatchOvers(e.target.value)}
+                className="bg-white/80 border-slate-200 focus-visible:ring-emerald-400 rounded-lg h-9 text-sm" />
             </div>
-            <div className="space-y-1">
-              <Label className="text-[11px] md:text-xs font-semibold text-slate-600">Batted First</Label>
+            <div className="space-y-0.5">
+              <Label className="text-[10px] font-semibold text-slate-600">Batted First</Label>
               <Select value={battingFirst} onValueChange={(v) => setBattingFirst(v as 'A' | 'B')}>
-                <SelectTrigger className="w-full bg-white/80 border-slate-200 focus-visible:ring-emerald-400 rounded-lg md:rounded-xl h-10">
+                <SelectTrigger className="w-full bg-white/80 border-slate-200 focus-visible:ring-emerald-400 rounded-lg h-9 text-sm">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="rounded-xl border-slate-200/60 bg-white/95 backdrop-blur-xl">
@@ -280,75 +240,74 @@ export default function NrrCalculator() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-1">
-              <Label className="text-[11px] md:text-xs font-semibold text-slate-600">First Innings Score</Label>
-              <Input placeholder="e.g. 156" value={firstInningsScore} onChange={(e) => setFirstInningsScore(e.target.value)} className="bg-white/80 border-slate-200 focus-visible:ring-emerald-400 text-base md:text-lg font-bold rounded-lg md:rounded-xl h-10" />
+            <div className="space-y-0.5">
+              <Label className="text-[10px] font-semibold text-slate-600">1st Innings Score</Label>
+              <Input placeholder="156" value={firstInningsScore} onChange={(e) => setFirstInningsScore(e.target.value)}
+                className="bg-white/80 border-slate-200 focus-visible:ring-emerald-400 font-bold rounded-lg h-9 text-sm" />
             </div>
           </div>
           {error && (
-            <Alert variant="destructive" className="rounded-xl border-rose-200 bg-rose-50/80 backdrop-blur-sm animate-in fade-in slide-in-from-top-2">
+            <Alert variant="destructive" className="rounded-xl border-rose-200 bg-rose-50/80 py-2">
               <AlertCircle className="h-4 w-4" />
-              <AlertTitle className="font-bold">Error</AlertTitle>
-              <AlertDescription className="font-medium">{error}</AlertDescription>
+              <AlertTitle className="font-bold text-xs">Error</AlertTitle>
+              <AlertDescription className="text-xs">{error}</AlertDescription>
             </Alert>
           )}
-        </CardContent>
+        </div>
       </Card>
 
       {/* Results */}
       {result && (
-        <div className="space-y-6 animate-in slide-in-from-bottom-6 fade-in duration-700">
-          <Alert className="rounded-xl md:rounded-2xl border-emerald-300/50 bg-gradient-to-r from-emerald-50/90 to-teal-50/90 backdrop-blur-xl shadow-lg border-l-4 border-l-emerald-500 p-3 md:p-5">
-            <Trophy className="h-5 w-5 md:h-6 md:w-6 text-emerald-600 absolute top-3 md:top-5" />
-            <div className="pl-8 md:pl-10">
-              <AlertTitle className="text-emerald-900 text-base md:text-lg font-bold tracking-tight">NRR Qualification Scenario</AlertTitle>
-              <AlertDescription className="mt-1 md:mt-1.5 text-slate-700 text-sm md:text-base font-medium leading-relaxed">
-                <strong className="text-emerald-800">{result.chaserName}</strong> must chase <strong className="text-slate-900 px-1 py-0.5 bg-white rounded shadow-sm border border-slate-200 text-sm">{result.target}</strong> runs within <strong className="text-slate-900 px-1 py-0.5 bg-white rounded shadow-sm border border-slate-200 text-sm">{result.safestOvers} ov</strong> to surpass <strong className="text-emerald-800">{result.opponentName}</strong> (NRR: {result.opponentFinalNRR}).
+        <div className="space-y-2 animate-in slide-in-from-bottom-6 fade-in duration-700">
+          <Alert className="rounded-xl border-emerald-300/50 bg-gradient-to-r from-emerald-50/90 to-teal-50/90 backdrop-blur-xl shadow-lg border-l-4 border-l-emerald-500 py-3 px-4">
+            <Trophy className="h-4 w-4 text-emerald-600 absolute top-3" />
+            <div className="pl-7">
+              <AlertTitle className="text-emerald-900 text-sm font-bold">NRR Qualification Scenario</AlertTitle>
+              <AlertDescription className="mt-1 text-slate-700 text-xs font-medium leading-relaxed">
+                <strong className="text-emerald-800">{result.chaserName}</strong> must chase{' '}
+                <strong className="text-slate-900 px-1 py-0.5 bg-white rounded border border-slate-200 text-xs">{result.target}</strong> runs within{' '}
+                <strong className="text-slate-900 px-1 py-0.5 bg-white rounded border border-slate-200 text-xs">{result.safestOvers} ov</strong> to surpass{' '}
+                <strong className="text-emerald-800">{result.opponentName}</strong> (NRR: {result.opponentFinalNRR})
               </AlertDescription>
             </div>
           </Alert>
 
-          <Card className="rounded-xl md:rounded-2xl border-white/40 bg-white/60 backdrop-blur-xl shadow-lg md:shadow-xl overflow-hidden relative">
+          <Card className="rounded-xl border-white/40 bg-white/60 backdrop-blur-xl shadow-lg overflow-hidden relative !py-0 !gap-0">
             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-slate-400 to-slate-300" />
-            <CardHeader className="px-4 md:px-6 pb-2 md:pb-4 pt-5 md:pt-6">
-              <CardTitle className="text-lg md:text-2xl font-bold text-slate-800">Chase Targets</CardTitle>
-              <CardDescription className="text-sm md:text-base font-medium">Max overs for each scoring total</CardDescription>
-            </CardHeader>
-            <CardContent className="p-0">
-              <div className="overflow-x-auto pb-1 -webkit-overflow-scrolling-touch">
-                <table className="w-full text-xs md:text-sm min-w-[520px]">
-                  <thead>
-                    <tr className="bg-slate-900/90 backdrop-blur-md text-white border-b-2 border-slate-800">
-                      <th className="px-5 py-4 text-left font-bold tracking-wider uppercase text-xs">Runs to Score</th>
-                      <th className="px-5 py-4 text-left font-bold tracking-wider uppercase text-xs">Finish By</th>
-                      <th className="px-5 py-4 text-right font-bold tracking-wider uppercase text-xs text-blue-300">{result.chaserName} NRR</th>
-                      <th className="px-5 py-4 text-right font-bold tracking-wider uppercase text-xs text-orange-300">{result.opponentName} NRR</th>
-                      <th className="px-5 py-4 text-right font-bold tracking-wider uppercase text-xs text-emerald-300">NRR Gain</th>
+            <div className="px-4 py-3">
+              <p className="text-sm font-bold text-slate-800">Chase Targets</p>
+              <p className="text-xs text-slate-500 font-medium mb-2">Max overs for each scoring total</p>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs min-w-[480px]">
+                <thead>
+                  <tr className="bg-slate-900/90 text-white">
+                    <th className="px-4 py-2.5 text-left font-bold tracking-wider uppercase text-[10px]">Runs</th>
+                    <th className="px-4 py-2.5 text-left font-bold tracking-wider uppercase text-[10px]">Finish By</th>
+                    <th className="px-4 py-2.5 text-right font-bold tracking-wider uppercase text-[10px] text-blue-300">{result.chaserName} NRR</th>
+                    <th className="px-4 py-2.5 text-right font-bold tracking-wider uppercase text-[10px] text-orange-300">{result.opponentName} NRR</th>
+                    <th className="px-4 py-2.5 text-right font-bold tracking-wider uppercase text-[10px] text-emerald-300">Gain</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {result.edgeCases.map((sc, idx) => (
+                    <tr key={idx} className={`transition-colors hover:bg-white/80 ${idx === 0 ? 'bg-gradient-to-r from-emerald-50/80 to-teal-50/80 font-medium' : idx % 2 === 0 ? 'bg-white/40' : 'bg-slate-50/40'}`}>
+                      <td className="px-4 py-2.5 font-bold text-slate-900">{sc.runs}</td>
+                      <td className="px-4 py-2.5">
+                        <span className={`inline-flex items-center justify-center rounded-full px-2.5 py-0.5 text-[10px] font-bold ${idx === 0 ? 'bg-emerald-500 text-white' : 'bg-white border border-slate-200 text-slate-700'}`}>
+                          {sc.maxOvers} Ov
+                        </span>
+                      </td>
+                      <td className="px-4 py-2.5 text-right font-mono text-blue-700 font-semibold">{sc.chaserNRR >= 0 ? '+' : ''}{sc.chaserNRR.toFixed(3)}</td>
+                      <td className="px-4 py-2.5 text-right font-mono text-orange-700 font-semibold">{sc.opponentNRR >= 0 ? '+' : ''}{sc.opponentNRR.toFixed(3)}</td>
+                      <td className="px-4 py-2.5 text-right">
+                        <span className="font-mono font-bold text-emerald-600 bg-emerald-100/50 px-1.5 py-0.5 rounded">+{sc.nrrDiff.toFixed(3)}</span>
+                      </td>
                     </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100 border-t border-slate-200">
-                    {result.edgeCases.map((sc, idx) => (
-                      <tr
-                        key={idx}
-                        className={`transition-colors hover:bg-white/80 ${idx === 0 ? 'bg-gradient-to-r from-emerald-50/80 to-teal-50/80 font-medium' : idx % 2 === 0 ? 'bg-white/40' : 'bg-slate-50/40'}`}
-                      >
-                        <td className="px-5 py-3.5 font-bold text-slate-900 text-base">{sc.runs}</td>
-                        <td className="px-5 py-3.5">
-                          <span className={`inline-flex items-center justify-center rounded-full px-3 py-1 text-xs font-bold tracking-wide shadow-sm transform transition-transform hover:scale-105 ${idx === 0 ? 'bg-emerald-500 text-white shadow-emerald-200' : 'bg-white border border-slate-200 text-slate-700'}`}>
-                            {sc.maxOvers} Ov
-                          </span>
-                        </td>
-                        <td className="px-5 py-3.5 text-right font-mono text-blue-700 font-semibold">{sc.chaserNRR >= 0 ? '+' : ''}{sc.chaserNRR.toFixed(3)}</td>
-                        <td className="px-5 py-3.5 text-right font-mono text-orange-700 font-semibold">{sc.opponentNRR >= 0 ? '+' : ''}{sc.opponentNRR.toFixed(3)}</td>
-                        <td className="px-5 py-3.5 text-right">
-                          <span className="font-mono font-bold text-emerald-600 bg-emerald-100/50 px-2 py-1 rounded-md">+{sc.nrrDiff.toFixed(3)}</span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </CardContent>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </Card>
         </div>
       )}
