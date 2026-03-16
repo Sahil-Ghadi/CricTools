@@ -23,7 +23,7 @@ export default function CricketAnalytics() {
               <img src="/logo.png" alt="CricWorks Logo" className="w-full h-full object-contain" />
             </div>
             <h1 className="text-4xl md:text-6xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-blue-700 to-emerald-600">
-              CricWorks
+              CricTools
             </h1>
           </div>
           <p className="text-sm md:text-xl text-slate-600 max-w-2xl mx-auto font-semibold tracking-tight">
@@ -35,14 +35,14 @@ export default function CricketAnalytics() {
         <Tabs defaultValue="scorecard" className="w-full">
           <div className="flex justify-center mb-5 md:mb-8">
             <TabsList className="grid w-full max-w-md grid-cols-2 h-auto p-1 bg-slate-200/50 backdrop-blur-lg rounded-xl shadow-inner border border-slate-200/50">
-              <TabsTrigger 
-                value="scorecard" 
+              <TabsTrigger
+                value="scorecard"
                 className="rounded-lg data-[state=active]:bg-white data-[state=active]:text-blue-700 data-[state=active]:shadow-sm transition-all duration-300 font-semibold py-2.5 text-slate-600 border-none"
               >
                 PDF Parser
               </TabsTrigger>
-              <TabsTrigger 
-                value="nrr" 
+              <TabsTrigger
+                value="nrr"
                 className="rounded-lg data-[state=active]:bg-white data-[state=active]:text-emerald-700 data-[state=active]:shadow-sm transition-all duration-300 font-semibold py-2.5 text-slate-600 border-none"
               >
                 Smart NRR
